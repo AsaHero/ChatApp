@@ -27,7 +27,10 @@ type userHandler struct {
 }
 
 func NewUserHandler(service service.User, cfg *config.Config) *fiber.App {
-	handler := userHandler{}
+	handler := userHandler{
+		cfg:     cfg,
+		service: service,
+	}
 
 	app := fiber.New()
 
@@ -69,7 +72,7 @@ func (h *userHandler) SignUp(c *fiber.Ctx) error {
 		if err == entity.ErrorNotFound {
 			isExists = false
 		} else {
-			return c.Status(fiber.StatusBadRequest).JSON(map[string]string{"error": err.Error()})
+			return c.Status(fiber.StatusInternalServerError).JSON(map[string]string{"error": err.Error()})
 		}
 	}
 	if isExists {

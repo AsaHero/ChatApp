@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -38,8 +39,7 @@ func main() {
 	})
 
 	go func() {
-		log.Println("Listen: " + " to address " + ":8080")
-		if err := router.Listen(":8080"); err != nil {
+		if err := router.Listen(fmt.Sprintf("%s%s", cfg.Host, cfg.Port)); err != nil {
 			log.Fatalf("error while starting server: %s", err.Error())
 		}
 	}()

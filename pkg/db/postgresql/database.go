@@ -7,6 +7,7 @@ import (
 
 	"github.com/AsaHero/chat_app/entity"
 	"github.com/AsaHero/chat_app/pkg/config"
+	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -14,6 +15,7 @@ import (
 
 type PostgreSQL struct {
 	Pool *pgxpool.Pool
+	Sq   sq.StatementBuilderType
 }
 
 func NewPostgreSQLDatabase(cfg *config.Config) (*PostgreSQL, error) {
@@ -29,6 +31,7 @@ func NewPostgreSQLDatabase(cfg *config.Config) (*PostgreSQL, error) {
 
 	return &PostgreSQL{
 		Pool: db,
+		Sq:   sq.StatementBuilder.PlaceholderFormat(sq.Dollar),
 	}, nil
 }
 
@@ -45,7 +48,7 @@ func (p *PostgreSQL) Error(err error) error {
 		}
 	}
 
-	if err == pgx.ErrNoRows {
+	if err.Error() == pgx.ErrNoRows.Error() {
 		return entity.ErrorNotFound
 	}
 	return err
