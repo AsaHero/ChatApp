@@ -3,6 +3,13 @@ package config
 import "os"
 
 type Config struct {
+	Host string
+	Port string
+
+	Token struct {
+		Secret string
+	}
+
 	PostgresDB struct {
 		Host     string
 		Port     string
@@ -15,6 +22,11 @@ type Config struct {
 
 func NewConfig() *Config {
 	config := Config{}
+
+	config.Host = getEnv("SERVER_HOST", "localhost")
+	config.Port = getEnv("SERVER_PORT", ":8080")
+
+	config.Token.Secret = getEnv("TOKEN_SECRET", "secret")
 
 	config.PostgresDB.Host = getEnv("POSTGRES_HOST", "localhost")
 	config.PostgresDB.Port = getEnv("POSTGRES_PORT", "5432")

@@ -33,6 +33,7 @@ func main() {
 	userService := service.NewUserService(timeDuration, userRepo)
 
 	router := api.NewRouter(api.RouterArgs{
+		Cfg:         cfg,
 		UserService: userService,
 	})
 

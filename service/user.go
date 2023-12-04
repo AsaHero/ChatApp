@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -16,6 +17,8 @@ type User interface {
 	Create(ctx context.Context, user *entity.User) (string, error)
 	Update(ctx context.Context, user *entity.User) error
 	Delete(ctx context.Context, id string) error
+
+	Login(ctx context.Context, email, password string) (*entity.User, error)
 }
 
 type userService struct {
@@ -84,4 +87,25 @@ func (s *userService) Delete(ctx context.Context, id string) error {
 	defer cancel()
 
 	return s.userRepo.Delete(ctx, id)
+}
+
+func (s *userService) Login(ctx context.Context, email, password string) (*entity.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, s.ctxTimeout)
+	defer cancel()
+
+	user, err := s.Get(ctx, map[string]string{"email": email})
+	if err != nil {
+		if err == entity.ErrorNotFound {
+			return nil, fmt.Errorf("user doesn't exists!")
+		} else {
+			return nil, err
+		}
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
+	if err != nil {
+		return nil, fmt.Errorf("incorrect password")
+	}
+
+	return user, nil
 }
