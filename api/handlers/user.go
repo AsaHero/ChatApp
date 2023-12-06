@@ -1,27 +1,24 @@
 package handlers
 
 import (
-	"encoding/json"
+	"time"
 
-	"github.com/AsaHero/chat_app/entity"
+	"github.com/AsaHero/chat_app/api/middleware"
 	"github.com/AsaHero/chat_app/pkg/config"
-	"github.com/AsaHero/chat_app/pkg/token"
 	"github.com/AsaHero/chat_app/service"
 	"github.com/gofiber/fiber/v2"
 )
 
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type SignUpRequest struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+type User struct {
+	ID        string `json:"id"`
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
 }
 
 type userHandler struct {
+	BaseHandler
 	cfg     *config.Config
 	service service.User
 }
@@ -33,60 +30,44 @@ func NewUserHandler(service service.User, cfg *config.Config) *fiber.App {
 	}
 
 	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		if err := middleware.Authorizer(cfg.Token.Secret, c); err != nil {
+			return err
+		}
 
-	app.Post("/sign-up", handler.SignUp)
-	app.Post("/login", handler.Login)
+		return c.Next()
+	})
+
+	app.Get("/", handler.GetUser)
 
 	return app
 }
 
-func (h *userHandler) Login(c *fiber.Ctx) error {
-	var req LoginRequest
-	if err := json.Unmarshal(c.Request().Body(), &req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(map[string]string{"error": "cannot parse request!"})
+func (h *userHandler) GetUser(c *fiber.Ctx) error {
+	data, ok := h.GetCtxData(c)
+	if !ok {
+		return c.Status(fiber.StatusBadRequest).JSON(map[string]string{"err": "failed to parse context data"})
 	}
 
-	user, err := h.service.Login(c.Context(), req.Email, req.Password)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(map[string]string{"error": err.Error()})
+	id, ok := data["id"]
+	if !ok {
+		return c.Status(fiber.StatusBadRequest).JSON(map[string]string{"err": "user id is not identified in authorization token"})
 	}
 
-	token, err := token.GenerateJWT(h.cfg.Token.Secret, map[string]any{"id": user.ID})
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(map[string]string{"error": err.Error()})
-	}
-
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"token": token})
-}
-
-func (h *userHandler) SignUp(c *fiber.Ctx) error {
-	var req SignUpRequest
-	if err := json.Unmarshal(c.Request().Body(), &req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(map[string]string{"error": "cannot parse request!"})
-	}
-
-	var isExists bool = true
-
-	_, err := h.service.Get(c.Context(), map[string]string{"email": req.Email})
-	if err != nil {
-		if err == entity.ErrorNotFound {
-			isExists = false
-		} else {
-			return c.Status(fiber.StatusInternalServerError).JSON(map[string]string{"error": err.Error()})
-		}
-	}
-	if isExists {
-		return c.Status(fiber.StatusBadRequest).JSON(map[string]string{"error": "user already exists!"})
-	}
-
-	id, err := h.service.Create(c.Context(), &entity.User{
-		Username:     req.Username,
-		Email:        req.Email,
-		PasswordHash: req.Password,
+	user, err := h.service.Get(c.Context(), map[string]string{
+		"id": id,
 	})
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(map[string]string{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(map[string]string{"err": err.Error()})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"id": id})
+	resp := User{
+		ID: user.ID,
+		Username: user.Username,
+		Email: user.Email,
+		CreatedAt: user.CreatedAt.Format(time.RFC1123),
+		UpdatedAt: user.UpdatedAt.Format(time.RFC1123),
+	}
+
+	return c.Status(fiber.StatusOK).JSON(resp)
 }

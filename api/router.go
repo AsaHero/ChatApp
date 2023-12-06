@@ -29,6 +29,7 @@ func NewRouter(args RouterArgs) *fiber.App {
 	}))
 
 	app.Route("/", func(router fiber.Router) {
+		app.Mount("/", handlers.NewAuthHandler(args.UserService, args.Cfg))
 		app.Mount("/user", handlers.NewUserHandler(args.UserService, args.Cfg))
 	})
 
