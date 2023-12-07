@@ -3,7 +3,6 @@ package handlers
 import (
 	"time"
 
-	"github.com/AsaHero/chat_app/api/middleware"
 	"github.com/AsaHero/chat_app/pkg/config"
 	"github.com/AsaHero/chat_app/service"
 	"github.com/gofiber/fiber/v2"
@@ -30,14 +29,6 @@ func NewUserHandler(service service.User, cfg *config.Config) *fiber.App {
 	}
 
 	app := fiber.New()
-	app.Use(func(c *fiber.Ctx) error {
-		if err := middleware.Authorizer(cfg.Token.Secret, c); err != nil {
-			return err
-		}
-
-		return c.Next()
-	})
-
 	app.Get("/", handler.GetUser)
 
 	return app
@@ -62,9 +53,9 @@ func (h *userHandler) GetUser(c *fiber.Ctx) error {
 	}
 
 	resp := User{
-		ID: user.ID,
-		Username: user.Username,
-		Email: user.Email,
+		ID:        user.ID,
+		Username:  user.Username,
+		Email:     user.Email,
 		CreatedAt: user.CreatedAt.Format(time.RFC1123),
 		UpdatedAt: user.UpdatedAt.Format(time.RFC1123),
 	}

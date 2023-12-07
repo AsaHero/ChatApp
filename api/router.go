@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/AsaHero/chat_app/api/handlers"
+	"github.com/AsaHero/chat_app/api/middleware"
 	"github.com/AsaHero/chat_app/pkg/config"
 	"github.com/AsaHero/chat_app/service"
 	"github.com/gofiber/fiber/v2"
@@ -28,10 +29,11 @@ func NewRouter(args RouterArgs) *fiber.App {
 		MaxAge:           300,
 	}))
 
-	app.Route("/", func(router fiber.Router) {
-		app.Mount("/", handlers.NewAuthHandler(args.UserService, args.Cfg))
-		app.Mount("/user", handlers.NewUserHandler(args.UserService, args.Cfg))
-	})
+	public := app.Group("/")
+	public.Mount("/", handlers.NewAuthHandler(args.UserService, args.Cfg))
+
+	protected := app.Group("/", middleware.Authorizer(args.Cfg.Token.Secret))
+	protected.Mount("/user", handlers.NewUserHandler(args.UserService, args.Cfg))
 
 	return app
 }
