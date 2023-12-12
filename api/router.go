@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/AsaHero/chat_app/api/handlers"
 	"github.com/AsaHero/chat_app/api/middleware"
+	"github.com/AsaHero/chat_app/api/ws"
 	"github.com/AsaHero/chat_app/pkg/config"
 	"github.com/AsaHero/chat_app/service"
 	"github.com/gofiber/fiber/v2"
@@ -14,6 +15,7 @@ import (
 type RouterArgs struct {
 	Cfg         *config.Config
 	UserService service.User
+	Hub         *ws.Hub
 }
 
 func NewRouter(args RouterArgs) *fiber.App {
@@ -34,6 +36,7 @@ func NewRouter(args RouterArgs) *fiber.App {
 
 	protected := app.Group("/", middleware.Authorizer(args.Cfg.Token.Secret))
 	protected.Mount("/user", handlers.NewUserHandler(args.UserService, args.Cfg))
+	protected.Mount("/ws", ws.NewHandler(args.Hub, args.UserService))
 
 	return app
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AsaHero/chat_app/api"
+	"github.com/AsaHero/chat_app/api/ws"
 	"github.com/AsaHero/chat_app/pkg/config"
 	"github.com/AsaHero/chat_app/pkg/db/postgresql"
 	"github.com/AsaHero/chat_app/repository"
@@ -32,10 +33,13 @@ func main() {
 
 	userRepo := repository.NewUserRepo(db)
 	userService := service.NewUserService(timeDuration, userRepo)
+	hub := ws.NewHub()
+	go hub.Run()
 
 	router := api.NewRouter(api.RouterArgs{
 		Cfg:         cfg,
 		UserService: userService,
+		Hub:         hub,
 	})
 
 	go func() {
